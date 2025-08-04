@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REME - Medication Reminder App</title>
+    <title>REME - Smart Medication Reminder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -23,425 +23,632 @@
         
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            50% { opacity: 0.5; }
         }
         
-        .notification-badge {
-            animation: bounce 1s infinite;
+        .location-ping {
+            animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
         }
         
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
+        @keyframes ping {
+            75%, 100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
         }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- Header -->
     <header class="gradient-bg text-white p-6 shadow-lg">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
+        <div class="max-w-md mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-3">
                 <div class="bg-white p-2 rounded-full">
                     <svg class="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                     </svg>
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold">REME</h1>
-                    <p class="text-sm opacity-90">Your Medication Reminder</p>
+                    <p class="text-sm opacity-90">Smart Medication Reminder</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-4">
-                <div class="relative">
-                    <svg class="w-6 h-6 cursor-pointer" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
-                    </svg>
-                    <span class="notification-badge absolute -top-2 -right-2 bg-red-500 text-xs rounded-full w-5 h-5 flex items-center justify-center" id="notificationCount">3</span>
+            <div class="flex items-center space-x-2">
+                <div id="locationStatus" class="flex items-center space-x-1">
+                    <div class="w-3 h-3 bg-green-400 rounded-full location-ping"></div>
+                    <span class="text-xs">GPS Active</span>
                 </div>
-                <button class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition-all">
-                    Profile
-                </button>
             </div>
         </div>
     </header>
 
+    <!-- Location Permission Banner -->
+    <div id="locationBanner" class="bg-blue-600 text-white p-4 text-center hidden">
+        <p class="text-sm mb-2">📍 Enable location access for pharmacy proximity alerts</p>
+        <button onclick="requestLocationPermission()" class="bg-white text-blue-600 px-4 py-1 rounded text-sm font-medium">
+            Enable Location
+        </button>
+    </div>
+
     <!-- Main Content -->
-    <main class="max-w-6xl mx-auto p-6">
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl card-shadow">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-600 text-sm">Active Medications</p>
-                        <p class="text-2xl font-bold text-purple-600" id="activeMeds">5</p>
-                    </div>
-                    <div class="bg-purple-100 p-3 rounded-full">
-                        <svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
+    <main class="max-w-md mx-auto p-4 space-y-6">
+        <!-- Today's Medications -->
+        <div class="bg-white rounded-xl card-shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Today's Medications</h2>
+                <div class="flex items-center space-x-2">
+                    <button onclick="syncWithPharmacy()" class="text-blue-600 text-sm">
+                        🔄 Sync
+                    </button>
                 </div>
             </div>
             
-            <div class="bg-white p-6 rounded-xl card-shadow">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-600 text-sm">Due Today</p>
-                        <p class="text-2xl font-bold text-orange-600" id="dueToday">3</p>
+            <div class="space-y-3" id="todayMedications">
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <div>
+                            <p class="font-medium text-sm">Paracetamol 500mg</p>
+                            <p class="text-xs text-gray-600">8:00 AM - Taken ✓</p>
+                        </div>
                     </div>
-                    <div class="bg-orange-100 p-3 rounded-full">
-                        <svg class="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
+                    <button class="text-green-600 text-xs">✓</button>
                 </div>
-            </div>
-            
-            <div class="bg-white p-6 rounded-xl card-shadow">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-600 text-sm">Refill Alerts</p>
-                        <p class="text-2xl font-bold text-red-600" id="refillAlerts">2</p>
+                
+                <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200 pulse-animation">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                        <div>
+                            <p class="font-medium text-sm">Amoxicillin 250mg</p>
+                            <p class="text-xs text-gray-600">1:00 PM - Due Now!</p>
+                        </div>
                     </div>
-                    <div class="bg-red-100 p-3 rounded-full">
-                        <svg class="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z"/>
-                        </svg>
-                    </div>
+                    <button onclick="markAsTaken('amoxicillin')" class="bg-yellow-500 text-white px-3 py-1 rounded text-xs">
+                        Take Now
+                    </button>
                 </div>
-            </div>
-            
-            <div class="bg-white p-6 rounded-xl card-shadow">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-600 text-sm">Nearby Pharmacies</p>
-                        <p class="text-2xl font-bold text-green-600" id="nearbyPharmacies">4</p>
+                
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
+                        <div>
+                            <p class="font-medium text-sm">Vitamin D3</p>
+                            <p class="text-xs text-gray-600">8:00 PM - Upcoming</p>
+                        </div>
                     </div>
-                    <div class="bg-green-100 p-3 rounded-full">
-                        <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/>
-                        </svg>
-                    </div>
+                    <button onclick="setAlarmReminder('vitamin-d3', '20:00')" class="text-blue-600 text-xs">
+                        🔔 Set Alarm
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Today's Reminders -->
-        <div class="bg-white rounded-xl card-shadow p-6 mb-8">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-semibold text-gray-800">Today's Reminders</h2>
-                <button class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors" onclick="addReminder()">
-                    + Add Reminder
+        <!-- Nearby Pharmacies -->
+        <div class="bg-white rounded-xl card-shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Nearby Pharmacies</h2>
+                <button onclick="openGoogleMaps()" class="text-blue-600 text-sm">
+                    🗺️ View Map
                 </button>
             </div>
             
-            <div class="space-y-4" id="remindersList">
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-l-4 border-green-500">
-                    <div class="flex items-center space-x-4">
-                        <div class="bg-green-100 p-2 rounded-full">
-                            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
+            <div class="space-y-3" id="nearbyPharmacies">
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-green-500 rounded-full location-ping"></div>
                         <div>
-                            <h3 class="font-medium text-gray-800">Aspirin 100mg</h3>
-                            <p class="text-sm text-gray-600">Take 1 tablet after breakfast</p>
-                            <p class="text-xs text-gray-500">8:00 AM - Taken ✓</p>
+                            <p class="font-medium text-sm">MedPlus Pharmacy</p>
+                            <p class="text-xs text-gray-600">📍 85m away - You're nearby!</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <p class="text-sm font-medium text-green-600">Completed</p>
-                        <p class="text-xs text-gray-500">27 days remaining</p>
-                    </div>
+                    <button onclick="getDirections('MedPlus Pharmacy')" class="bg-green-600 text-white px-3 py-1 rounded text-xs">
+                        Directions
+                    </button>
                 </div>
                 
-                <div class="flex items-center justify-between p-4 bg-orange-50 rounded-lg border-l-4 border-orange-500 pulse-animation">
-                    <div class="flex items-center space-x-4">
-                        <div class="bg-orange-100 p-2 rounded-full">
-                            <svg class="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
                         <div>
-                            <h3 class="font-medium text-gray-800">Vitamin D3</h3>
-                            <p class="text-sm text-gray-600">Take 1 capsule with lunch</p>
-                            <p class="text-xs text-gray-500">1:00 PM - Due now</p>
+                            <p class="font-medium text-sm">Apollo Pharmacy</p>
+                            <p class="text-xs text-gray-600">📍 250m away</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <button class="bg-orange-600 text-white px-3 py-1 rounded text-sm hover:bg-orange-700 transition-colors" onclick="markTaken(this)">
-                            Mark Taken
-                        </button>
-                        <p class="text-xs text-gray-500 mt-1">15 days remaining</p>
-                    </div>
+                    <button onclick="getDirections('Apollo Pharmacy')" class="text-blue-600 text-xs">
+                        Directions
+                    </button>
                 </div>
                 
-                <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
-                    <div class="flex items-center space-x-4">
-                        <div class="bg-red-100 p-2 rounded-full">
-                            <svg class="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z"/>
-                            </svg>
-                        </div>
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
                         <div>
-                            <h3 class="font-medium text-gray-800">Blood Pressure Medication</h3>
-                            <p class="text-sm text-gray-600">Take 1 tablet before dinner</p>
-                            <p class="text-xs text-gray-500">6:00 PM - Refill needed!</p>
+                            <p class="font-medium text-sm">Guardian Pharmacy</p>
+                            <p class="text-xs text-gray-600">📍 450m away</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <button class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors" onclick="findPharmacy()">
-                            Find Pharmacy
-                        </button>
-                        <p class="text-xs text-red-500 mt-1">3 days remaining</p>
-                    </div>
+                    <button onclick="getDirections('Guardian Pharmacy')" class="text-blue-600 text-xs">
+                        Directions
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Features Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Add Medication -->
-            <div class="bg-white rounded-xl card-shadow p-6">
-                <div class="bg-blue-100 p-3 rounded-full w-fit mb-4">
-                    <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/>
-                    </svg>
+        <!-- Refill Alerts -->
+        <div class="bg-white rounded-xl card-shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Refill Alerts</h2>
+            
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-red-500 rounded-full pulse-animation"></div>
+                        <div>
+                            <p class="font-medium text-sm">Amoxicillin 250mg</p>
+                            <p class="text-xs text-gray-600">⚠️ 3 days remaining</p>
+                        </div>
+                    </div>
+                    <button onclick="orderRefill('amoxicillin')" class="bg-red-600 text-white px-3 py-1 rounded text-xs">
+                        Order Now
+                    </button>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Add Medication</h3>
-                <p class="text-gray-600 text-sm mb-4">Add new medications with custom reminder schedules</p>
-                <button class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors" onclick="showAddMedicationForm()">
-                    Add New Medication
-                </button>
+                
+                <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                        <div>
+                            <p class="font-medium text-sm">Paracetamol 500mg</p>
+                            <p class="text-xs text-gray-600">⏰ 7 days remaining</p>
+                        </div>
+                    </div>
+                    <button onclick="setRefillReminder('paracetamol')" class="text-yellow-600 text-xs">
+                        🔔 Remind Me
+                    </button>
+                </div>
             </div>
+        </div>
 
-            <!-- Pharmacy Locator -->
-            <div class="bg-white rounded-xl card-shadow p-6">
-                <div class="bg-green-100 p-3 rounded-full w-fit mb-4">
-                    <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/>
-                    </svg>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Find Pharmacies</h3>
-                <p class="text-gray-600 text-sm mb-4">Locate nearby pharmacies and get directions</p>
-                <button class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors" onclick="showPharmacyMap()">
-                    Find Nearby
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl card-shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h2>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="addMedication()" class="bg-purple-600 text-white p-3 rounded-lg text-sm font-medium">
+                    ➕ Add Medicine
                 </button>
-            </div>
-
-            <!-- E-Bills -->
-            <div class="bg-white rounded-xl card-shadow p-6">
-                <div class="bg-purple-100 p-3 rounded-full w-fit mb-4">
-                    <svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z"/>
-                    </svg>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">E-Bills & History</h3>
-                <p class="text-gray-600 text-sm mb-4">View purchase history and digital receipts</p>
-                <button class="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors" onclick="showEBills()">
-                    View Bills
+                <button onclick="viewHistory()" class="bg-blue-600 text-white p-3 rounded-lg text-sm font-medium">
+                    📊 View History
+                </button>
+                <button onclick="emergencyContacts()" class="bg-red-600 text-white p-3 rounded-lg text-sm font-medium">
+                    🚨 Emergency
+                </button>
+                <button onclick="settingsMenu()" class="bg-gray-600 text-white p-3 rounded-lg text-sm font-medium">
+                    ⚙️ Settings
                 </button>
             </div>
         </div>
     </main>
 
-    <!-- Add Medication Modal -->
-    <div id="addMedicationModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Add New Medication</h3>
-                <button onclick="closeModal('addMedicationModal')" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+    <!-- Location Alert Modal -->
+    <div id="locationAlertModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 w-full max-w-sm mx-4 slide-up">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/>
                     </svg>
-                </button>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">You're near MedPlus Pharmacy!</h3>
+                <p class="text-sm text-gray-600 mb-4">Perfect time to pick up your Amoxicillin refill. Only 85m away!</p>
+                
+                <div class="space-y-3">
+                    <button onclick="getDirections('MedPlus Pharmacy')" class="w-full bg-green-600 text-white py-2 rounded-lg">
+                        Get Directions
+                    </button>
+                    <button onclick="callPharmacy('MedPlus')" class="w-full bg-blue-600 text-white py-2 rounded-lg">
+                        Call Pharmacy
+                    </button>
+                    <button onclick="closeModal('locationAlertModal')" class="w-full bg-gray-300 text-gray-700 py-2 rounded-lg">
+                        Dismiss
+                    </button>
+                </div>
             </div>
-            
-            <form class="space-y-4" onsubmit="addNewMedication(event)">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Medication Name</label>
-                    <input type="text" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="e.g., Aspirin 100mg" required>
+        </div>
+    </div>
+
+    <!-- Alarm Setup Modal -->
+    <div id="alarmSetupModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 w-full max-w-sm mx-4 slide-up">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+                    </svg>
                 </div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Set Medication Alarm</h3>
+                <p class="text-sm text-gray-600 mb-4" id="alarmMedicationName">Vitamin D3 - 8:00 PM</p>
                 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Dosage Instructions</label>
-                    <input type="text" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="e.g., Take 1 tablet after breakfast" required>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                        <input type="time" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Duration (days)</label>
-                        <input type="number" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="30" required>
-                    </div>
-                </div>
-                
-                <div class="flex space-x-3 pt-4">
-                    <button type="button" onclick="closeModal('addMedicationModal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                <div class="space-y-3">
+                    <button onclick="setPhoneAlarm()" class="w-full bg-blue-600 text-white py-2 rounded-lg">
+                        🔔 Set Phone Alarm
+                    </button>
+                    <button onclick="setAppNotification()" class="w-full bg-purple-600 text-white py-2 rounded-lg">
+                        📱 App Notification Only
+                    </button>
+                    <button onclick="closeModal('alarmSetupModal')" class="w-full bg-gray-300 text-gray-700 py-2 rounded-lg">
                         Cancel
                     </button>
-                    <button type="submit" class="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors">
-                        Add Medication
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Pharmacy Map Modal -->
-    <div id="pharmacyMapModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl p-6 w-full max-w-2xl mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Nearby Pharmacies</h3>
-                <button onclick="closeModal('pharmacyMapModal')" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-3">
-                        <div class="bg-green-100 p-2 rounded-full">
-                            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4 class="font-medium">MedPlus Pharmacy</h4>
-                            <p class="text-sm text-gray-600">0.2 km away • Open until 10 PM</p>
-                        </div>
-                    </div>
-                    <button class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors">
-                        Get Directions
-                    </button>
-                </div>
-                
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-3">
-                        <div class="bg-blue-100 p-2 rounded-full">
-                            <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4 class="font-medium">Apollo Pharmacy</h4>
-                            <p class="text-sm text-gray-600">0.5 km away • 24/7 Open</p>
-                        </div>
-                    </div>
-                    <button class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
-                        Get Directions
-                    </button>
-                </div>
-                
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center space-x-3">
-                        <div class="bg-purple-100 p-2 rounded-full">
-                            <svg class="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4 class="font-medium">HealthPlus Pharmacy</h4>
-                            <p class="text-sm text-gray-600">0.8 km away • Open until 9 PM</p>
-                        </div>
-                    </div>
-                    <button class="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition-colors">
-                        Get Directions
-                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- E-Bills Modal -->
-    <div id="eBillsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl p-6 w-full max-w-2xl mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">E-Bills & Purchase History</h3>
-                <button onclick="closeModal('eBillsModal')" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <h4 class="font-medium">MedPlus Pharmacy</h4>
-                            <p class="text-sm text-gray-600">Dec 15, 2024 • Bill #MP2024001</p>
-                        </div>
-                        <span class="text-lg font-semibold text-green-600">₹450.00</span>
-                    </div>
-                    <div class="text-sm text-gray-600 space-y-1">
-                        <p>• Aspirin 100mg (30 tablets) - ₹120</p>
-                        <p>• Vitamin D3 (30 capsules) - ₹280</p>
-                        <p>• Service charge - ₹50</p>
-                    </div>
-                    <div class="flex space-x-2 mt-3">
-                        <button class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
-                            Download PDF
-                        </button>
-                        <button class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors">
-                            Reorder
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <h4 class="font-medium">Apollo Pharmacy</h4>
-                            <p class="text-sm text-gray-600">Dec 10, 2024 • Bill #AP2024089</p>
-                        </div>
-                        <span class="text-lg font-semibold text-green-600">₹320.00</span>
-                    </div>
-                    <div class="text-sm text-gray-600 space-y-1">
-                        <p>• Blood Pressure Medication (30 tablets) - ₹270</p>
-                        <p>• Service charge - ₹50</p>
-                    </div>
-                    <div class="flex space-x-2 mt-3">
-                        <button class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
-                            Download PDF
-                        </button>
-                        <button class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors">
-                            Reorder
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <!-- Success Notification -->
+    <div id="successNotification" class="fixed top-4 right-4 bg-green-600 text-white p-4 rounded-lg shadow-lg hidden slide-up">
+        <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span id="notificationMessage">Action completed successfully!</span>
         </div>
     </div>
 
     <script>
-        // Sample data and state management
-        let medications = [
-            { name: "Aspirin 100mg", dosage: "Take 1 tablet after breakfast", time: "08:00", taken: true, remaining: 27 },
-            { name: "Vitamin D3", dosage: "Take 1 capsule with lunch", time: "13:00", taken: false, remaining: 15 },
-            { name: "Blood Pressure Medication", dosage: "Take 1 tablet before dinner", time: "18:00", taken: false, remaining: 3 }
-        ];
+        let userLocation = null;
+        let watchId = null;
+        let currentMedication = null;
 
-        // Modal functions
-        function showAddMedicationForm() {
-            document.getElementById('addMedicationModal').classList.remove('hidden');
-            document.getElementById('addMedicationModal').classList.add('flex');
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLocationPermission();
+            loadMedicationData();
+            startLocationTracking();
+            
+            // Simulate receiving pharmacy bill data
+            setTimeout(() => {
+                const pharmacyData = localStorage.getItem('lastREMEIntegration');
+                if (pharmacyData) {
+                    processPharmaycBill(JSON.parse(pharmacyData));
+                }
+            }, 1000);
+        });
+
+        // Location permission and tracking
+        function checkLocationPermission() {
+            if ('geolocation' in navigator) {
+                navigator.permissions.query({name: 'geolocation'}).then(function(result) {
+                    if (result.state === 'granted') {
+                        document.getElementById('locationStatus').innerHTML = `
+                            <div class="w-3 h-3 bg-green-400 rounded-full location-ping"></div>
+                            <span class="text-xs">GPS Active</span>
+                        `;
+                    } else {
+                        document.getElementById('locationBanner').classList.remove('hidden');
+                    }
+                });
+            }
         }
 
-        function showPharmacyMap() {
-            document.getElementById('pharmacyMapModal').classList.remove('hidden');
-            document.getElementById('pharmacyMapModal').classList.add('flex');
+        function requestLocationPermission() {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    userLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    document.getElementById('locationBanner').classList.add('hidden');
+                    document.getElementById('locationStatus').innerHTML = `
+                        <div class="w-3 h-3 bg-green-400 rounded-full location-ping"></div>
+                        <span class="text-xs">GPS Active</span>
+                    `;
+                    startLocationTracking();
+                    showNotification('📍 Location access enabled! Pharmacy alerts are now active.');
+                },
+                function(error) {
+                    showNotification('❌ Location access denied. Some features may not work.');
+                }
+            );
         }
 
-        function showEBills() {
-            document.getElementById('eBillsModal').classList.remove('hidden');
-            document.getElementById('eBillsModal').classList.add('flex');
+        function startLocationTracking() {
+            if ('geolocation' in navigator) {
+                watchId = navigator.geolocation.watchPosition(
+                    function(position) {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        checkPharmacyProximity();
+                    },
+                    function(error) {
+                        console.log('Location tracking error:', error);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 30000,
+                        timeout: 27000
+                    }
+                );
+            }
+        }
+
+        function checkPharmacyProximity() {
+            // Simulate pharmacy locations
+            const pharmacies = [
+                { name: 'MedPlus Pharmacy', lat: 12.9716, lng: 77.5946, distance: 85 },
+                { name: 'Apollo Pharmacy', lat: 12.9726, lng: 77.5956, distance: 250 },
+                { name: 'Guardian Pharmacy', lat: 12.9736, lng: 77.5966, distance: 450 }
+            ];
+
+            pharmacies.forEach(pharmacy => {
+                if (pharmacy.distance <= 100) {
+                    // User is within 100m of pharmacy
+                    triggerPharmacyAlert(pharmacy);
+                }
+            });
+        }
+
+        function triggerPharmacyAlert(pharmacy) {
+            // Check if user has pending refills
+            const pendingRefills = ['Amoxicillin 250mg'];
+            
+            if (pendingRefills.length > 0) {
+                // Show location alert modal
+                document.getElementById('locationAlertModal').classList.remove('hidden');
+                document.getElementById('locationAlertModal').classList.add('flex');
+                
+                // Trigger phone notification
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification(`You're near ${pharmacy.name}!`, {
+                        body: 'Perfect time to pick up your medication refill.',
+                        icon: '/favicon.ico',
+                        tag: 'pharmacy-proximity'
+                    });
+                }
+                
+                // Vibrate if supported
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([200, 100, 200]);
+                }
+            }
+        }
+
+        // Google Maps integration
+        function openGoogleMaps() {
+            if (userLocation) {
+                const mapsUrl = `https://www.google.com/maps/search/pharmacy/@${userLocation.lat},${userLocation.lng},15z`;
+                window.open(mapsUrl, '_blank');
+            } else {
+                const mapsUrl = 'https://www.google.com/maps/search/pharmacy';
+                window.open(mapsUrl, '_blank');
+            }
+            showNotification('🗺️ Opening Google Maps to find nearby pharmacies...');
+        }
+
+        function getDirections(pharmacyName) {
+            let destination = '';
+            
+            switch(pharmacyName) {
+                case 'MedPlus Pharmacy':
+                    destination = 'MedPlus+Pharmacy+near+me';
+                    break;
+                case 'Apollo Pharmacy':
+                    destination = 'Apollo+Pharmacy+near+me';
+                    break;
+                case 'Guardian Pharmacy':
+                    destination = 'Guardian+Pharmacy+near+me';
+                    break;
+                default:
+                    destination = pharmacyName.replace(' ', '+');
+            }
+            
+            const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+            window.open(directionsUrl, '_blank');
+            showNotification(`🧭 Getting directions to ${pharmacyName}...`);
+        }
+
+        // Phone alarm integration
+        function setAlarmReminder(medicationId, time) {
+            currentMedication = { id: medicationId, time: time, name: 'Vitamin D3' };
+            document.getElementById('alarmSetupModal').classList.remove('hidden');
+            document.getElementById('alarmSetupModal').classList.add('flex');
+        }
+
+        function setPhoneAlarm() {
+            // Try to use the device's alarm app
+            const alarmTime = currentMedication.time;
+            const medicationName = currentMedication.name;
+            
+            // For Android devices
+            if (navigator.userAgent.includes('Android')) {
+                const alarmIntent = `intent://alarm#Intent;scheme=android.intent.action.SET_ALARM;S.android.intent.extra.alarm.MESSAGE=Take ${medicationName};i.android.intent.extra.alarm.HOUR=${parseInt(alarmTime.split(':')[0])};i.android.intent.extra.alarm.MINUTES=${parseInt(alarmTime.split(':')[1])};end`;
+                window.location.href = alarmIntent;
+            } 
+            // For iOS devices
+            else if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+                // iOS doesn't allow direct alarm setting, so we'll use a workaround
+                const alarmUrl = `clock-alarm://`;
+                window.location.href = alarmUrl;
+            }
+            // Fallback for other devices
+            else {
+                // Set a browser-based reminder
+                setAppNotification();
+                return;
+            }
+            
+            closeModal('alarmSetupModal');
+            showNotification(`⏰ Phone alarm set for ${alarmTime} - ${medicationName}`);
+        }
+
+        function setAppNotification() {
+            // Request notification permission
+            if ('Notification' in window) {
+                Notification.requestPermission().then(function(permission) {
+                    if (permission === 'granted') {
+                        // Calculate time until medication
+                        const now = new Date();
+                        const [hours, minutes] = currentMedication.time.split(':');
+                        const medicationTime = new Date();
+                        medicationTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                        
+                        if (medicationTime <= now) {
+                            medicationTime.setDate(medicationTime.getDate() + 1);
+                        }
+                        
+                        const timeUntil = medicationTime.getTime() - now.getTime();
+                        
+                        setTimeout(() => {
+                            new Notification(`Time to take ${currentMedication.name}!`, {
+                                body: `It's ${currentMedication.time} - Don't forget your medication.`,
+                                icon: '/favicon.ico',
+                                tag: 'medication-reminder',
+                                requireInteraction: true
+                            });
+                            
+                            // Vibrate
+                            if ('vibrate' in navigator) {
+                                navigator.vibrate([500, 200, 500, 200, 500]);
+                            }
+                        }, timeUntil);
+                        
+                        closeModal('alarmSetupModal');
+                        showNotification(`📱 App notification set for ${currentMedication.time} - ${currentMedication.name}`);
+                    }
+                });
+            }
+        }
+
+        // Medication management
+        function markAsTaken(medicationId) {
+            // Update UI to show medication as taken
+            const medicationElement = document.querySelector(`[data-medication="${medicationId}"]`);
+            if (medicationElement) {
+                medicationElement.classList.remove('bg-yellow-50', 'border-yellow-200', 'pulse-animation');
+                medicationElement.classList.add('bg-green-50', 'border-green-200');
+                medicationElement.querySelector('.bg-yellow-500').classList.remove('bg-yellow-500');
+                medicationElement.querySelector('.rounded-full').classList.add('bg-green-500');
+            }
+            
+            showNotification('✅ Medication marked as taken!');
+            
+            // Log to medication history
+            const medicationLog = JSON.parse(localStorage.getItem('medicationLog') || '[]');
+            medicationLog.push({
+                medication: 'Amoxicillin 250mg',
+                time: new Date().toISOString(),
+                status: 'taken'
+            });
+            localStorage.setItem('medicationLog', JSON.stringify(medicationLog));
+        }
+
+        function orderRefill(medicationId) {
+            // Simulate ordering refill from nearby pharmacy
+            showNotification('📞 Contacting MedPlus Pharmacy for refill...');
+            
+            setTimeout(() => {
+                showNotification('✅ Refill order placed! Ready for pickup in 2 hours.');
+            }, 2000);
+        }
+
+        function setRefillReminder(medicationId) {
+            const reminderTime = new Date();
+            reminderTime.setDate(reminderTime.getDate() + 5); // Remind in 5 days
+            
+            showNotification('🔔 Refill reminder set for 5 days from now');
+        }
+
+        // Process pharmacy bill data
+        function processPharmaycBill(pharmacyData) {
+            if (pharmacyData && pharmacyData.medications) {
+                // Add medications to today's list
+                const todayMeds = document.getElementById('todayMedications');
+                
+                pharmacyData.medications.forEach(med => {
+                    // Set up automatic reminders based on pharmacy data
+                    med.reminderTimes.forEach(time => {
+                        scheduleNotification(med.name, time);
+                    });
+                });
+                
+                showNotification(`📋 Received ${pharmacyData.medications.length} medications from ${pharmacyData.pharmacy.name}`);
+            }
+        }
+
+        function scheduleNotification(medicationName, time) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const now = new Date();
+                const [hours, minutes] = time.split(':');
+                const notificationTime = new Date();
+                notificationTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                
+                if (notificationTime <= now) {
+                    notificationTime.setDate(notificationTime.getDate() + 1);
+                }
+                
+                const timeUntil = notificationTime.getTime() - now.getTime();
+                
+                setTimeout(() => {
+                    new Notification(`Time to take ${medicationName}!`, {
+                        body: `It's ${time} - Don't forget your medication.`,
+                        icon: '/favicon.ico',
+                        tag: 'medication-reminder',
+                        requireInteraction: true
+                    });
+                    
+                    if ('vibrate' in navigator) {
+                        navigator.vibrate([500, 200, 500]);
+                    }
+                }, timeUntil);
+            }
+        }
+
+        // Utility functions
+        function syncWithPharmacy() {
+            showNotification('🔄 Syncing with pharmacy systems...');
+            
+            setTimeout(() => {
+                showNotification('✅ Sync complete! All medications up to date.');
+            }, 2000);
+        }
+
+        function callPharmacy(pharmacyName) {
+            // Simulate calling pharmacy
+            const phoneNumber = '+919876543210';
+            window.location.href = `tel:${phoneNumber}`;
+            showNotification(`📞 Calling ${pharmacyName}...`);
+        }
+
+        function loadMedicationData() {
+            // Load any stored medication data
+            const medicationLog = localStorage.getItem('medicationLog');
+            if (medicationLog) {
+                console.log('Loaded medication history:', JSON.parse(medicationLog));
+            }
+        }
+
+        function addMedication() {
+            showNotification('➕ Opening medication entry form...');
+        }
+
+        function viewHistory() {
+            showNotification('📊 Loading medication history...');
+        }
+
+        function emergencyContacts() {
+            showNotification('🚨 Loading emergency contacts...');
+        }
+
+        function settingsMenu() {
+            showNotification('⚙️ Opening settings...');
         }
 
         function closeModal(modalId) {
@@ -449,90 +656,27 @@
             document.getElementById(modalId).classList.remove('flex');
         }
 
-        // Medication functions
-        function addNewMedication(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
+        function showNotification(message) {
+            const notification = document.getElementById('successNotification');
+            document.getElementById('notificationMessage').textContent = message;
+            notification.classList.remove('hidden');
             
-            // Simulate adding medication
-            alert('Medication added successfully! You will receive reminders as scheduled.');
-            closeModal('addMedicationModal');
-            form.reset();
-            
-            // Update active medications count
-            const activeMedsElement = document.getElementById('activeMeds');
-            activeMedsElement.textContent = parseInt(activeMedsElement.textContent) + 1;
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 4000);
         }
 
-        function markTaken(button) {
-            const reminderCard = button.closest('.bg-orange-50');
-            reminderCard.classList.remove('bg-orange-50', 'border-orange-500', 'pulse-animation');
-            reminderCard.classList.add('bg-green-50', 'border-green-500');
-            
-            const statusDiv = button.parentElement;
-            statusDiv.innerHTML = '<p class="text-sm font-medium text-green-600">Completed</p><p class="text-xs text-gray-500 mt-1">15 days remaining</p>';
-            
-            // Update due today count
-            const dueTodayElement = document.getElementById('dueToday');
-            dueTodayElement.textContent = parseInt(dueTodayElement.textContent) - 1;
-            
-            // Update notification count
-            const notificationCount = document.getElementById('notificationCount');
-            notificationCount.textContent = parseInt(notificationCount.textContent) - 1;
+        // Request notification permission on load
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
         }
 
-        function findPharmacy() {
-            showPharmacyMap();
-        }
-
-        function addReminder() {
-            showAddMedicationForm();
-        }
-
-        // Simulate location-based notifications
-        function simulateLocationAlert() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    // Simulate being near a pharmacy
-                    setTimeout(() => {
-                        alert('📍 You are near MedPlus Pharmacy! Don\'t forget to refill your Blood Pressure Medication.');
-                    }, 2000);
-                });
+        // Simulate location-based alert after 5 seconds
+        setTimeout(() => {
+            if (Math.random() > 0.5) { // 50% chance to show demo alert
+                triggerPharmacyAlert({ name: 'MedPlus Pharmacy', distance: 85 });
             }
-        }
-
-        // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
-            // Simulate location check after 3 seconds
-            setTimeout(simulateLocationAlert, 3000);
-            
-            // Update current time display
-            setInterval(() => {
-                const now = new Date();
-                const currentHour = now.getHours();
-                
-                // Check for medication reminders
-                medications.forEach(med => {
-                    const medHour = parseInt(med.time.split(':')[0]);
-                    if (currentHour === medHour && !med.taken) {
-                        // This would trigger a notification in a real app
-                        console.log(`Reminder: Time to take ${med.name}`);
-                    }
-                });
-            }, 60000); // Check every minute
-        });
-
-        // Close modals when clicking outside
-        document.addEventListener('click', function(event) {
-            const modals = ['addMedicationModal', 'pharmacyMapModal', 'eBillsModal'];
-            modals.forEach(modalId => {
-                const modal = document.getElementById(modalId);
-                if (event.target === modal) {
-                    closeModal(modalId);
-                }
-            });
-        });
+        }, 5000);
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96a061a8c5517fda',t:'MTc1NDMzNDkwNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96a0aca3c2b2b85b',t:'MTc1NDMzNzk3Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
